@@ -2,14 +2,17 @@ package main
 
 import (
 	"context"
-	"github.com/gorilla/mux"
-	"github.com/redis/go-redis/v9"
+	"github.com/aknevrnky/go-currency-api/pkg/api/today"
+	"github.com/aknevrnky/go-currency-api/pkg/repository"
+	"github.com/aknevrnky/go-currency-api/pkg/service"
 	"log"
 	"net/http"
 	"os"
 	"strconv"
 
+	"github.com/gorilla/mux"
 	"github.com/joho/godotenv"
+	"github.com/redis/go-redis/v9"
 )
 
 var (
@@ -18,7 +21,6 @@ var (
 
 type Application struct {
 	RDB    *redis.Client
-	RCtx   *context.Context
 	Router *mux.Router
 }
 
@@ -59,7 +61,6 @@ func bootstrap() Application {
 	// Create app
 	app := Application{
 		RDB:    rdb,
-		RCtx:   &ctx,
 		Router: router,
 	}
 
@@ -67,7 +68,12 @@ func bootstrap() Application {
 }
 
 func (a *Application) AssignRoutes() {
+	tcmbRepo := repository.NewTcmbRepository(a.RDB)
+	tcmbService := service.NewTcmbService(tcmbRepo)
+	todayApi := today.NewTodayApi(tcmbService)
 
+	a.Router.HandleFunc("/today", todayApi.GetAllToday).Methods("GET")
+	a.Router.HandleFunc("/today/{code}", todayApi.GetByCodeToday).Methods("GET")
 }
 
 func (a *Application) Run(port string) {
