@@ -2,7 +2,10 @@ package main
 
 import (
 	"context"
+	"github.com/aknevrnky/go-currency-api/pkg/api/today"
+	"github.com/aknevrnky/go-currency-api/pkg/repository"
 	"github.com/aknevrnky/go-currency-api/pkg/router"
+	"github.com/aknevrnky/go-currency-api/pkg/service"
 	"log"
 	"net/http"
 	"os"
@@ -25,8 +28,12 @@ type Application struct {
 func main() {
 	bootstrap()
 
+	tcmbRepo := repository.NewTcmbRepository(RDB)
+	tcmbService := service.NewTcmbService(tcmbRepo)
+	todayApi := today.NewTodayApi(tcmbService)
+
 	app := Application{
-		Router: router.New(RDB),
+		Router: router.New(todayApi),
 	}
 
 	app.Run(":8080")
