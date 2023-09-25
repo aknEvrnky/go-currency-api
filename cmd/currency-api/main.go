@@ -2,9 +2,7 @@ package main
 
 import (
 	"context"
-	"github.com/aknevrnky/go-currency-api/pkg/api/today"
-	"github.com/aknevrnky/go-currency-api/pkg/repository"
-	"github.com/aknevrnky/go-currency-api/pkg/service"
+	"github.com/aknevrnky/go-currency-api/pkg/router"
 	"log"
 	"net/http"
 	"os"
@@ -17,22 +15,24 @@ import (
 
 var (
 	ctx = context.Background()
+	RDB *redis.Client
 )
 
 type Application struct {
-	RDB    *redis.Client
 	Router *mux.Router
 }
 
 func main() {
-	app := bootstrap()
+	bootstrap()
 
-	app.AssignRoutes()
+	app := Application{
+		Router: router.New(RDB),
+	}
 
 	app.Run(":8080")
 }
 
-func bootstrap() Application {
+func bootstrap() {
 	// Load .env file
 	err := godotenv.Load()
 	if err != nil {
@@ -55,25 +55,7 @@ func bootstrap() Application {
 		log.Fatal("Error connecting to Redis")
 	}
 
-	// create router
-	router := mux.NewRouter()
-
-	// Create app
-	app := Application{
-		RDB:    rdb,
-		Router: router,
-	}
-
-	return app
-}
-
-func (a *Application) AssignRoutes() {
-	tcmbRepo := repository.NewTcmbRepository(a.RDB)
-	tcmbService := service.NewTcmbService(tcmbRepo)
-	todayApi := today.NewTodayApi(tcmbService)
-
-	a.Router.HandleFunc("/today", todayApi.GetAllToday).Methods("GET")
-	a.Router.HandleFunc("/today/{code}", todayApi.GetByCodeToday).Methods("GET")
+	RDB = rdb
 }
 
 func (a *Application) Run(port string) {
